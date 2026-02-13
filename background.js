@@ -129,8 +129,28 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 
   if (info.menuItemId === "ExploreOnCanvas") {
-    // TODO: Will be implemented in E2-2 (session payload) and E2-3 (canvas page)
-    console.log("Explore on Canvas:", info.selectionText);
+    const sessionId = crypto.randomUUID();
+    const session = {
+      sessionId,
+      sourceText: info.selectionText,
+      coreQuestion: "What are the key ideas here?",
+      pathSuggestions: [
+        "Clarify",
+        "Go Deeper",
+        "Challenge",
+        "Apply",
+        "Connect",
+        "Surprise Me"
+      ],
+      demoMode: true,
+      createdAt: Date.now()
+    };
+
+    await chrome.storage.local.set({ [`session_${sessionId}`]: session });
+    // TODO: Session TTL cleanup — consider expiring sessions older than 7 days
+    console.log("Explore on Canvas: session created", sessionId);
+
+    // TODO: E2-3 will add chrome.tabs.create here to open canvas.html
   }
 });
 

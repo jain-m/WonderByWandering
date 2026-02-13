@@ -98,6 +98,35 @@
   --easing-default: cubic-bezier(0.4, 0, 0.2, 1);
   --easing-entrance: cubic-bezier(0, 0, 0.2, 1);
   --easing-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* ============================================================
+     SEMANTIC ROLES
+     ============================================================ */
+
+  /* Atlas Paper */
+  --atlas-paper-bg: var(--color-paper-bg);
+  --atlas-paper-grid-dot: var(--color-paper-grid-dot);
+
+  /* Atlas Routes */
+  --atlas-route-color: var(--color-route);
+  --atlas-route-active-color: var(--color-route-active);
+  --atlas-route-opacity-idle: 0.3;
+  --atlas-route-opacity-active: 1.0;
+  --atlas-route-opacity-hover: 0.6;
+
+  /* Atlas Cards */
+  --atlas-card-bg: var(--color-card-bg);
+  --atlas-card-border: var(--color-card-border);
+  --atlas-card-text-primary: var(--color-text-primary);
+  --atlas-card-text-secondary: var(--color-text-secondary);
+  --atlas-card-text-muted: var(--color-text-muted);
+  --atlas-card-shadow: var(--shadow-card);
+  --atlas-card-shadow-active: var(--shadow-card-active);
+
+  /* Atlas Signals */
+  --atlas-signal-loading: var(--color-loading);
+  --atlas-signal-error: var(--color-error);
+  --atlas-signal-success: var(--color-success);
 }
 
 /* ============================================================
