@@ -94,6 +94,7 @@ export const ConversationCompass: React.FC = () => {
   const { uiMode, session, addNodes, addEdges, setUiMode, setActiveNode } = useAtlasStore();
   const { fitView } = useReactFlow();
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Only render when in compass mode
   if (uiMode !== 'compass') {
@@ -107,7 +108,11 @@ export const ConversationCompass: React.FC = () => {
 
   // Handle path selection: generate node tree
   const handlePathSelect = async (pathType: PathType, pathLabel: string) => {
-    if (!session?.sourceText) return;
+    if (!session?.sourceText || session.sourceText.trim().length < 10) {
+      setErrorMsg('Please select more text (at least 10 characters) to explore.');
+      return;
+    }
+    setErrorMsg(null);
 
     setLoading(true);
 
@@ -189,7 +194,9 @@ export const ConversationCompass: React.FC = () => {
         {/* Center card with source text */}
         <div className={styles.centerCard}>
           <div className={styles.centerText}>
-            {loading ? 'Generating...' : sourceExcerpt}
+            {errorMsg ? (
+              <span style={{ color: 'var(--atlas-signal-error, #D94F4F)' }}>{errorMsg}</span>
+            ) : loading ? 'Generating...' : sourceExcerpt}
           </div>
         </div>
 

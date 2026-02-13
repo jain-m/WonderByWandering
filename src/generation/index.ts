@@ -82,6 +82,14 @@ async function withFallback<T>(
     return await geminiCall(gemini);
   } catch (error) {
     console.warn('Gemini generation failed, falling back to mock:', error);
+
+    // Auto-switch to demo mode so subsequent calls skip Gemini
+    const session = useAtlasStore.getState().session;
+    if (session && !session.demoMode) {
+      useAtlasStore.getState().setSession({ ...session, demoMode: true });
+      console.warn('Auto-switched to demo mode due to Gemini failure');
+    }
+
     return mockCall(mockGenerator);
   }
 }

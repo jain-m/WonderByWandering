@@ -16,7 +16,9 @@ import type {
   BranchType,
   BranchResult,
 } from './mockGenerator';
-import { buildPathQuestionsPrompt, buildAnswerPrompt, buildBranchPrompt } from './prompts';
+import { buildPathQuestionsPrompt, buildAnswerPrompt, buildBranchPrompt, appendRetryInstruction } from './prompts';
+import { validatePathQuestions, validateBranches } from './qualityGates';
+import { useAtlasStore } from '../store/atlasStore';
 
 // ============================================================
 // API Key Access
@@ -40,37 +42,63 @@ async function getApiKey(): Promise<string | null> {
 const MODEL_ID = 'gemini-2.5-flash';
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}:generateContent`;
 
+const MAX_RETRIES = 3;
+const BACKOFF_MS = [1000, 2000, 4000]; // exponential: 1s, 2s, 4s
+
 /**
  * Call the Gemini API and return the raw text response.
  * Throws on missing key, HTTP errors, API-level errors, or empty responses.
+ * Retries with exponential backoff on 429 (rate limit) responses.
  */
 async function callGemini(prompt: string): Promise<string> {
   const apiKey = await getApiKey();
   if (!apiKey) throw new Error('No API key configured');
 
-  const response = await fetch(`${API_URL}?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-    }),
-  });
+  let lastError: Error | null = null;
 
-  if (!response.ok) {
-    throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    // Wait before retry (skip on first attempt)
+    if (attempt > 0) {
+      const delay = BACKOFF_MS[attempt - 1] ?? 4000;
+      console.warn(
+        `Gemini rate limited, retrying in ${delay}ms (attempt ${attempt}/${MAX_RETRIES})`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+
+    const response = await fetch(`${API_URL}?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+      }),
+    });
+
+    // Retry on rate limit
+    if (response.status === 429 && attempt < MAX_RETRIES) {
+      lastError = new Error('Rate limited (429)');
+      continue;
+    }
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (data.error) {
+      throw new Error(`Gemini error: ${data.error.message}`);
+    }
+
+    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      throw new Error('Empty response from Gemini');
+    }
+
+    return data.candidates[0].content.parts[0].text;
   }
 
-  const data = await response.json();
-
-  if (data.error) {
-    throw new Error(`Gemini error: ${data.error.message}`);
-  }
-
-  if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-    throw new Error('Empty response from Gemini');
-  }
-
-  return data.candidates[0].content.parts[0].text;
+  // All retries exhausted
+  throw lastError ?? new Error('Gemini call failed after retries');
 }
 
 // ============================================================
@@ -130,6 +158,12 @@ function validateBranchResult(obj: unknown): BranchResult {
 }
 
 // ============================================================
+// Quality Gate Retry Config
+// ============================================================
+
+const MAX_QUALITY_RETRIES = 2;
+
+// ============================================================
 // GenerationProvider Implementation
 // ============================================================
 
@@ -137,10 +171,28 @@ async function generatePathQuestions(
   sourceText: string,
   pathType: PathType,
 ): Promise<PathQuestionResult> {
-  const prompt = buildPathQuestionsPrompt(sourceText, pathType);
-  const text = await callGemini(prompt);
-  const parsed = parseJsonResponse(text);
-  return validatePathQuestionResult(parsed);
+  const existingQuestions = useAtlasStore.getState().nodes.map(n => n.data.question);
+  let prompt = buildPathQuestionsPrompt(sourceText, pathType);
+
+  for (let attempt = 0; attempt <= MAX_QUALITY_RETRIES; attempt++) {
+    const text = await callGemini(prompt);
+    const parsed = parseJsonResponse(text);
+    const result = validatePathQuestionResult(parsed);
+
+    const quality = validatePathQuestions(result, existingQuestions);
+    if (quality.passed || attempt === MAX_QUALITY_RETRIES) {
+      if (!quality.passed) {
+        console.warn('Quality gates failed after retries, accepting result:', quality.reasons);
+      }
+      return result;
+    }
+
+    console.warn(`Quality gate retry ${attempt + 1}/${MAX_QUALITY_RETRIES}:`, quality.reasons);
+    prompt = appendRetryInstruction(prompt);
+  }
+
+  // Unreachable, but TypeScript needs it
+  throw new Error('Quality gate loop exited unexpectedly');
 }
 
 async function generateAnswer(nodeData: NodeData): Promise<AnswerResult> {
@@ -154,12 +206,29 @@ async function generateBranches(
   nodeData: NodeData,
   branchType: BranchType,
 ): Promise<BranchResult> {
+  const existingQuestions = useAtlasStore.getState().nodes.map(n => n.data.question);
   const content =
     branchType === 'question' ? nodeData.question : (nodeData.answer?.summary || '');
-  const prompt = buildBranchPrompt(content, branchType, nodeData.sourceText);
-  const text = await callGemini(prompt);
-  const parsed = parseJsonResponse(text);
-  return validateBranchResult(parsed);
+  let prompt = buildBranchPrompt(content, branchType, nodeData.sourceText);
+
+  for (let attempt = 0; attempt <= MAX_QUALITY_RETRIES; attempt++) {
+    const text = await callGemini(prompt);
+    const parsed = parseJsonResponse(text);
+    const result = validateBranchResult(parsed);
+
+    const quality = validateBranches(result, existingQuestions);
+    if (quality.passed || attempt === MAX_QUALITY_RETRIES) {
+      if (!quality.passed) {
+        console.warn('Quality gates failed after retries, accepting result:', quality.reasons);
+      }
+      return result;
+    }
+
+    console.warn(`Quality gate retry ${attempt + 1}/${MAX_QUALITY_RETRIES}:`, quality.reasons);
+    prompt = appendRetryInstruction(prompt);
+  }
+
+  throw new Error('Quality gate loop exited unexpectedly');
 }
 
 // ============================================================

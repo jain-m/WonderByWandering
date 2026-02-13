@@ -4,11 +4,11 @@
  */
 
 import React, { useCallback, useEffect, useMemo } from 'react';
-import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import { Handle, Position, type NodeProps, type Node, type Edge } from '@xyflow/react';
 import { useAtlasStore } from '../../store/atlasStore';
 import type { AtlasNodeData } from '../../store/atlasStore';
-import type { PathType } from '../../generation/mockGenerator';
-import { generateAnswer } from '../../generation';
+import type { PathType, BranchType } from '../../generation/mockGenerator';
+import { generateAnswer, generateBranches } from '../../generation';
 import { startGeneration, markResolved, markError } from '../../utils/nodeStates';
 import { DURATION } from '../../utils/motion';
 import styles from './AtlasCard.module.css';
@@ -43,8 +43,9 @@ const PATH_LABELS: Record<PathType, string> = {
 type AtlasCardNode = Node<AtlasNodeData>;
 
 const AtlasCard: React.FC<NodeProps<AtlasCardNode>> = ({ id, data }) => {
-  const { answerVisibility, nodeStates, activeNodeId, toggleAnswer, updateNodeData } = useAtlasStore();
+  const { answerVisibility, nodeStates, activeNodeId, toggleAnswer, updateNodeData, addNodes, addEdges, setActiveNode } = useAtlasStore();
   const edges = useAtlasStore((s) => s.edges);
+  const nodes = useAtlasStore((s) => s.nodes);
 
   const nodeState = nodeStates[id] || 'idle';
   const isAnswerVisible = answerVisibility[id] || false;
@@ -105,6 +106,59 @@ const AtlasCard: React.FC<NodeProps<AtlasCardNode>> = ({ id, data }) => {
       markError(id);
     }
   }, [id, data, updateNodeData, answerVisibility, toggleAnswer]);
+
+  const handleBranch = useCallback(async (branchType: BranchType) => {
+    try {
+      const branches = await generateBranches({
+        question: data.question,
+        context: data.context,
+        answer: data.answer,
+        pathType: data.pathType,
+        sourceText: data.sourceText,
+      }, branchType);
+
+      // Find current node position from store
+      const currentNode = nodes.find((n) => n.id === id);
+      const parentX = currentNode?.position?.x ?? 0;
+      const parentY = currentNode?.position?.y ?? 0;
+
+      // Position children below parent with even spacing
+      const childCount = branches.length;
+      const spacing = 300;
+      const yOffset = 300;
+      const startX = parentX - ((childCount - 1) * spacing) / 2;
+
+      const newNodes: Node<AtlasNodeData>[] = branches.map((branch, index) => ({
+        id: `node-${Date.now()}-branch-${index}`,
+        type: 'atlasCard',
+        position: { x: startX + index * spacing, y: parentY + yOffset },
+        data: {
+          question: branch.question,
+          context: branch.context,
+          pathType: data.pathType,
+          sourceText: data.sourceText,
+          isNew: true,
+          spawnIndex: index,
+        },
+      }));
+
+      const newEdges: Edge[] = newNodes.map((node) => ({
+        id: `edge-${id}-${node.id}`,
+        source: id,
+        target: node.id,
+        type: 'atlasConnector',
+      }));
+
+      addNodes(newNodes);
+      addEdges(newEdges);
+      const firstNode = newNodes[0];
+      if (firstNode) {
+        setActiveNode(firstNode.id);
+      }
+    } catch (error) {
+      console.error('Failed to generate branches:', error);
+    }
+  }, [id, data, nodes, addNodes, addEdges, setActiveNode]);
 
   // Determine card CSS classes
   const cardClasses = [
@@ -183,14 +237,14 @@ const AtlasCard: React.FC<NodeProps<AtlasCardNode>> = ({ id, data }) => {
               <button
                 className={styles.branchButton}
                 style={{ borderColor: accentColor, color: accentColor }}
-                disabled
+                onClick={() => handleBranch('question')}
               >
                 Branch: Question
               </button>
               <button
                 className={styles.branchButton}
                 style={{ borderColor: accentColor, color: accentColor }}
-                disabled
+                onClick={() => handleBranch('answer')}
               >
                 Branch: Answer
               </button>
