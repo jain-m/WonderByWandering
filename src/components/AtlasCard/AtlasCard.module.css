@@ -21,6 +21,11 @@
   border-color: var(--atlas-card-border-active, var(--atlas-card-border));
 }
 
+/* On Active Thread (ancestor of active node — elevated shadow, no border change) */
+.cardOnThread {
+  box-shadow: var(--atlas-card-shadow-active);
+}
+
 /* Path Badge */
 .pathBadge {
   height: 24px;
@@ -85,6 +90,35 @@
 .showAnswerButton:focus-visible {
   outline: 2px solid var(--atlas-card-text-primary);
   outline-offset: 2px;
+}
+
+/* Answer Reveal Wrapper — smooth height + fade animation */
+.answerReveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows var(--duration-medium) var(--easing-default),
+    opacity var(--duration-fast) var(--easing-default) 50ms;
+  overflow: hidden;
+}
+
+.answerReveal.answerVisible {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.answerRevealInner {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .answerReveal {
+    transition: none;
+  }
 }
 
 /* Answer Body */
@@ -230,4 +264,30 @@
 .retryButton:focus-visible {
   outline: 2px solid var(--atlas-signal-error);
   outline-offset: 2px;
+}
+
+/* ============================================================
+   Spawn Animation — cards fade in + scale up on tree creation
+   ============================================================ */
+
+.cardSpawn {
+  animation: card-spawn-in var(--duration-medium, 200ms) var(--easing-entrance, cubic-bezier(0, 0, 0.2, 1)) both;
+}
+
+@keyframes card-spawn-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Reduced motion: skip spawn animation */
+@media (prefers-reduced-motion: reduce) {
+  .cardSpawn {
+    animation: none;
+  }
 }

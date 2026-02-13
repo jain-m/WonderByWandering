@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ReactFlow,
   Background,
   BackgroundVariant,
+  type Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useAtlasStore } from './store/atlasStore';
@@ -12,8 +13,12 @@ import { edgeTypes } from './components/AtlasConnector/AtlasConnector';
 import { CanvasControls } from './components/CanvasControls';
 
 export default function App() {
-  const { nodes, edges, onNodesChange, onEdgesChange, loadSession } = useAtlasStore();
+  const { nodes, edges, onNodesChange, onEdgesChange, setActiveNode, loadSession } = useAtlasStore();
   const [loading, setLoading] = useState(true);
+
+  const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
+    setActiveNode(node.id);
+  }, [setActiveNode]);
 
   // Read sessionId from URL and load session from chrome.storage.local
   useEffect(() => {
@@ -46,6 +51,7 @@ export default function App() {
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView

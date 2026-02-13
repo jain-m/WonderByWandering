@@ -37,6 +37,7 @@ export interface AtlasNodeData {
   pathType: PathType;
   sourceText: string;
   isNew?: boolean; // for spawn animation
+  spawnIndex?: number; // sibling index for stagger animation
   [key: string]: unknown; // React Flow requires this
 }
 

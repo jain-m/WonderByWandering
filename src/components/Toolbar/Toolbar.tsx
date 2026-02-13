@@ -10,7 +10,7 @@ import styles from './Toolbar.module.css';
 
 function ToolbarComponent() {
   const { fitView } = useReactFlow();
-  const { activeNodeId, nodes, session, resetCanvas } = useAtlasStore();
+  const { activeNodeId, nodes, edges, session, resetCanvas, setActiveNode } = useAtlasStore();
 
   const handleRecenter = () => {
     if (activeNodeId) {
@@ -18,6 +18,15 @@ function ToolbarComponent() {
       if (node) {
         fitView({ nodes: [node], padding: 0.5, duration: 300 });
       }
+    }
+  };
+
+  const handleBackToSeed = () => {
+    const targetIds = new Set(edges.map(e => e.target));
+    const root = nodes.find(n => !targetIds.has(n.id));
+    if (root) {
+      setActiveNode(root.id);
+      fitView({ nodes: [root], padding: 0.5, duration: 300 });
     }
   };
 
@@ -71,6 +80,19 @@ function ToolbarComponent() {
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
           <path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" />
+        </svg>
+      </button>
+
+      <button
+        className={styles.button}
+        onClick={handleBackToSeed}
+        title="Back to seed node"
+        disabled={nodes.length === 0}
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <circle cx="8" cy="8" r="5" />
+          <circle cx="8" cy="8" r="1.5" fill="currentColor" />
+          <path d="M8 1v2M8 13v2M1 8h2M13 8h2" />
         </svg>
       </button>
 

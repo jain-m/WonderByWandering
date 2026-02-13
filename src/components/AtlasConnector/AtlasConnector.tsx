@@ -13,6 +13,7 @@ import {
   type EdgeProps,
 } from '@xyflow/react';
 import { useAtlasStore } from '../../store/atlasStore';
+import { DURATION, EASING } from '../../utils/motion';
 
 // Build active thread path by walking parent edges from root to activeNodeId
 function getActiveThreadEdgeIds(
@@ -41,6 +42,7 @@ function getActiveThreadEdgeIds(
 
 function AtlasConnectorComponent({
   id,
+  target,
   sourceX,
   sourceY,
   targetX,
@@ -51,6 +53,7 @@ function AtlasConnectorComponent({
 }: EdgeProps) {
   const activeNodeId = useAtlasStore((s) => s.activeNodeId);
   const edges = useAtlasStore((s) => s.edges);
+  const nodes = useAtlasStore((s) => s.nodes);
 
   const activeThreadEdgeIds = useMemo(
     () => getActiveThreadEdgeIds(edges, activeNodeId),
@@ -58,6 +61,14 @@ function AtlasConnectorComponent({
   );
 
   const isActive = activeThreadEdgeIds.has(id);
+
+  // Check if target node is new (for spawn draw-in animation)
+  const targetNode = useMemo(
+    () => nodes.find((n) => n.id === target),
+    [nodes, target]
+  );
+  const isSpawning = targetNode?.data?.isNew === true;
+  const spawnIndex = (targetNode?.data?.spawnIndex as number) ?? 0;
 
   const [edgePath] = getBezierPath({
     sourceX,
@@ -68,6 +79,13 @@ function AtlasConnectorComponent({
     targetPosition,
   });
 
+  // Build edge animation: spawning draw-in takes priority, then active pulse
+  const edgeAnimation = isSpawning
+    ? `edge-draw-in ${DURATION.EDGE_DRAW}ms ${EASING.ENTRANCE} ${spawnIndex * DURATION.SIBLING_STAGGER}ms both`
+    : isActive
+      ? 'atlas-route-pulse 2s ease-in-out infinite'
+      : 'none';
+
   return (
     <>
       <BaseEdge
@@ -76,9 +94,11 @@ function AtlasConnectorComponent({
         style={{
           stroke: 'var(--atlas-route-color, #B8B5AD)',
           strokeWidth: 2,
-          opacity: isActive ? 1.0 : 0.3,
-          animation: isActive ? 'atlas-route-pulse 2s ease-in-out infinite' : 'none',
-          transition: 'opacity 150ms ease',
+          opacity: isActive || isSpawning ? 1.0 : 0.3,
+          strokeDasharray: isSpawning ? 1000 : undefined,
+          strokeDashoffset: isSpawning ? 1000 : undefined,
+          animation: edgeAnimation,
+          transition: isSpawning ? 'none' : 'opacity 150ms ease',
           ...style,
         }}
       />

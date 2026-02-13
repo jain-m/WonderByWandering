@@ -10,7 +10,8 @@
 import React, { useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { useAtlasStore } from '../../store/atlasStore';
-import { generatePathQuestions, type PathType } from '../../generation/mockGenerator';
+import { generatePathQuestions } from '../../generation';
+import type { PathType } from '../../generation/mockGenerator';
 import type { Node, Edge } from '@xyflow/react';
 import type { AtlasNodeData } from '../../store/atlasStore';
 import styles from './ConversationCompass.module.css';
@@ -127,6 +128,8 @@ export const ConversationCompass: React.FC = () => {
           pathType,
           sourceText: session.sourceText,
           context: 'Root question from ' + pathLabel,
+          isNew: true,
+          spawnIndex: 0,
         },
       };
 
@@ -147,6 +150,8 @@ export const ConversationCompass: React.FC = () => {
           context: branch.context,
           pathType,
           sourceText: session.sourceText,
+          isNew: true,
+          spawnIndex: index + 1,
         },
       }));
 
