@@ -70,6 +70,11 @@ chrome.runtime.onInstalled.addListener(() => {
     contexts: ["video", "link"],
     documentUrlPatterns: ["*://*.youtube.com/*"] // Only shows on YouTube
   });
+  chrome.contextMenus.create({
+    id: "ExploreOnCanvas",
+    title: "Explore on Canvas",
+    contexts: ["selection"]
+  });
 });
 
 // Toolbar Icon Click (Pinned Extension)
@@ -119,8 +124,13 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: runSummarization,
-      args: ["List key points From", transcriptText, API_KEY, API_URL] 
+      args: ["List key points From", transcriptText, API_KEY, API_URL]
     });
+  }
+
+  if (info.menuItemId === "ExploreOnCanvas") {
+    // TODO: Will be implemented in E2-2 (session payload) and E2-3 (canvas page)
+    console.log("Explore on Canvas:", info.selectionText);
   }
 });
 
