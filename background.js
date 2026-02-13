@@ -150,7 +150,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     // TODO: Session TTL cleanup — consider expiring sessions older than 7 days
     console.log("Explore on Canvas: session created", sessionId);
 
-    // TODO: E2-3 will add chrome.tabs.create here to open canvas.html
+    chrome.tabs.create({
+      url: chrome.runtime.getURL(`canvas.html?sessionId=${sessionId}`)
+    });
   }
 });
 
