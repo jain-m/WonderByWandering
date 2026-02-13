@@ -151,7 +151,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     console.log("Explore on Canvas: session created", sessionId);
 
     chrome.tabs.create({
-      url: chrome.runtime.getURL(`canvas.html?sessionId=${sessionId}`)
+      url: chrome.runtime.getURL(`dist/canvas.html?sessionId=${sessionId}`)
     });
   }
 });

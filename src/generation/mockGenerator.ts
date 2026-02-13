@@ -313,7 +313,7 @@ export async function generatePathQuestions(
 
   const sets = PATH_QUESTION_SETS[pathType];
   const index = simpleHash(sourceText) % sets.length;
-  return sets[index];
+  return sets[index]!;
 }
 
 export async function generateAnswer(
@@ -322,7 +322,7 @@ export async function generateAnswer(
   await mockDelay(800 + Math.random() * 600);
 
   const index = simpleHash(nodeData.question) % MOCK_ANSWERS.length;
-  return MOCK_ANSWERS[index];
+  return MOCK_ANSWERS[index]!;
 }
 
 export async function generateBranches(
@@ -333,7 +333,7 @@ export async function generateBranches(
 
   const pool = branchType === 'question' ? BRANCH_FROM_QUESTION : BRANCH_FROM_ANSWER;
   const index = simpleHash(nodeData.question + branchType) % pool.length;
-  return pool[index];
+  return pool[index]!;
 }
 
 // ============================================================
