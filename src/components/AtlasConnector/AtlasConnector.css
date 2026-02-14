@@ -1,0 +1,28 @@
+/* AtlasConnector pulse animation for active thread edges */
+@keyframes atlas-route-pulse {
+  0%, 100% { opacity: 1.0; }
+  50% { opacity: 0.8; }
+}
+
+/* Edge draw-in animation for spawning */
+@keyframes edge-draw-in {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Hover state — applied via JS but backup CSS */
+.react-flow__edge:hover path {
+  opacity: 0.6 !important;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__edge path {
+    animation: none !important;
+    transition: none !important;
+  }
+}

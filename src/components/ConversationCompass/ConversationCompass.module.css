@@ -1,0 +1,162 @@
+/**
+ * ConversationCompass CSS Module
+ * E4-1: Build centered radial menu component
+ */
+
+/* Full-screen overlay with semi-transparent backdrop */
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(26, 26, 26, 0.4);
+  z-index: 10;
+  backdrop-filter: blur(2px);
+}
+
+/* Radial layout container */
+.container {
+  position: relative;
+  width: 400px;
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Center card showing source text excerpt */
+.centerCard {
+  position: relative;
+  z-index: 2;
+  width: 180px;
+  height: 180px;
+  background: var(--color-card-bg);
+  border: 2px solid var(--color-card-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card-active);
+  padding: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+}
+
+.centerText {
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+  max-height: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 7;
+  -webkit-box-orient: vertical;
+}
+
+/* Path selector button (positioned absolutely via inline transform) */
+.pathButton {
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  background: var(--color-card-bg);
+  border: 2px solid var(--color-card-border);
+  border-radius: 50%;
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  transition: all var(--duration-medium) var(--easing-default);
+  z-index: 1;
+}
+
+.pathButton:hover {
+  transform: scale(1.08);
+  box-shadow: var(--shadow-card-hover);
+  z-index: 3;
+}
+
+.pathButton:active {
+  transform: scale(1.02);
+}
+
+/* Colored accent dot at top of button */
+.pathAccent {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-bottom: var(--space-1);
+  transition: all var(--duration-medium) var(--easing-default);
+}
+
+.pathButton:hover .pathAccent {
+  width: 10px;
+  height: 10px;
+}
+
+/* Text label inside button */
+.pathLabel {
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  text-align: center;
+  line-height: 1.2;
+  max-width: 70px;
+}
+
+/* Description tooltip on hover */
+.tooltip {
+  position: absolute;
+  bottom: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-text-primary);
+  color: var(--color-card-bg);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-button);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--easing-default);
+  z-index: 4;
+}
+
+.pathButton:hover .tooltip {
+  opacity: 1;
+}
+
+/* Path-specific accent colors */
+.pathButton[data-path="clarify"] .pathAccent {
+  background-color: var(--color-path-clarify);
+}
+
+.pathButton[data-path="go-deeper"] .pathAccent {
+  background-color: var(--color-path-go-deeper);
+}
+
+.pathButton[data-path="challenge"] .pathAccent {
+  background-color: var(--color-path-challenge);
+}
+
+.pathButton[data-path="apply"] .pathAccent {
+  background-color: var(--color-path-apply);
+}
+
+.pathButton[data-path="connect"] .pathAccent {
+  background-color: var(--color-path-connect);
+}
+
+.pathButton[data-path="surprise"] .pathAccent {
+  background-color: var(--color-path-surprise);
+}

@@ -1,0 +1,71 @@
+.toolbar {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--atlas-card-border, #e0ddd5);
+  border-radius: var(--radius-button, 8px);
+  box-shadow: var(--shadow-card, 0 2px 8px rgba(0, 0, 0, 0.08));
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary, #4a4a4a);
+  cursor: pointer;
+  transition: background var(--duration-fast, 150ms) ease, color var(--duration-fast, 150ms) ease;
+}
+
+.button:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--color-text-primary, #1a1a1a);
+}
+
+.button:active {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.button:disabled:hover {
+  background: transparent;
+  color: var(--color-text-secondary, #4a4a4a);
+}
+
+.buttonActive {
+  color: var(--color-path-clarify, #4A90D9);
+  background: rgba(74, 144, 217, 0.1);
+}
+
+.buttonActive:hover {
+  background: rgba(74, 144, 217, 0.15);
+}
+
+.divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 2px;
+  background: var(--atlas-card-border, #e0ddd5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+}

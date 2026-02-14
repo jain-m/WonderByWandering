@@ -70,6 +70,11 @@ chrome.runtime.onInstalled.addListener(() => {
     contexts: ["video", "link"],
     documentUrlPatterns: ["*://*.youtube.com/*"] // Only shows on YouTube
   });
+  chrome.contextMenus.create({
+    id: "ExploreOnCanvas",
+    title: "Explore on Canvas",
+    contexts: ["selection"]
+  });
 });
 
 // Toolbar Icon Click (Pinned Extension)
@@ -119,7 +124,48 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: runSummarization,
-      args: ["List key points From", transcriptText, API_KEY, API_URL] 
+      args: ["List key points From", transcriptText, API_KEY, API_URL]
+    });
+  }
+
+  if (info.menuItemId === "ExploreOnCanvas") {
+    if (!info.selectionText || info.selectionText.trim().length < 10) {
+      chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => {
+          const msg = document.createElement('div');
+          msg.textContent = 'Please select more text (at least 10 characters) to explore.';
+          msg.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#D94F4F;color:white;padding:12px 24px;border-radius:8px;z-index:2147483647;font-family:sans-serif;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,0.2);';
+          document.body.appendChild(msg);
+          setTimeout(() => msg.remove(), 3000);
+        }
+      });
+      return;
+    }
+
+    const sessionId = crypto.randomUUID();
+    const session = {
+      sessionId,
+      sourceText: info.selectionText,
+      coreQuestion: "What are the key ideas here?",
+      pathSuggestions: [
+        "Clarify",
+        "Go Deeper",
+        "Challenge",
+        "Apply",
+        "Connect",
+        "Surprise Me"
+      ],
+      demoMode: true,
+      createdAt: Date.now()
+    };
+
+    await chrome.storage.local.set({ [`session_${sessionId}`]: session });
+    // TODO: Session TTL cleanup — consider expiring sessions older than 7 days
+    console.log("Explore on Canvas: session created", sessionId);
+
+    chrome.tabs.create({
+      url: chrome.runtime.getURL(`dist/canvas.html?sessionId=${sessionId}`)
     });
   }
 });

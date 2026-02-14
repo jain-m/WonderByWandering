@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Knowledge Atlas</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body, #root { width: 100%; height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #faf9f6;
+    }
+    /* Placeholder styles — removed once React app mounts */
+    .canvas-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #4a4a4a;
+      gap: 12px;
+    }
+    .canvas-placeholder h1 { font-size: 24px; font-weight: 600; color: #1a1a1a; }
+    .canvas-placeholder p { font-size: 14px; color: #8a8a8a; }
+    .canvas-placeholder .source-text {
+      max-width: 600px;
+      padding: 16px;
+      background: #ffffff;
+      border: 1px solid #e0ddd5;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #4a4a4a;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="canvas-placeholder">
+      <h1>Knowledge Atlas</h1>
+      <p>Loading session...</p>
+      <div class="source-text" id="source-display"></div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.tsx"></script>
+</body>
+</html>
