@@ -56,6 +56,7 @@ interface AtlasState {
   uiMode: UiMode;
   answerVisibility: Record<string, boolean>;
   nodeStates: Record<string, NodeState>;
+  collapsedBranches: Record<string, { hiddenNodeIds: string[]; hiddenEdgeIds: string[] }>;
 
   // Actions
   addNode: (node: Node<AtlasNodeData>) => void;
@@ -69,6 +70,8 @@ interface AtlasState {
   setUiMode: (mode: UiMode) => void;
   setSession: (session: Session) => void;
   loadSession: (sessionId: string) => Promise<void>;
+  collapseBranch: (nodeId: string) => void;
+  expandBranch: (nodeId: string) => void;
   resetCanvas: () => void;
 
   // React Flow callbacks
@@ -88,6 +91,7 @@ const initialState = {
   uiMode: 'compass' as UiMode,
   answerVisibility: {} as Record<string, boolean>,
   nodeStates: {} as Record<string, NodeState>,
+  collapsedBranches: {} as Record<string, { hiddenNodeIds: string[]; hiddenEdgeIds: string[] }>,
 };
 
 // ============================================================
@@ -158,6 +162,67 @@ export const useAtlasStore = create<AtlasState>()((set, get) => ({
         });
       });
     }
+  },
+
+  // --- Collapse / Expand Branch ---
+
+  collapseBranch: (nodeId) => {
+    const state = get();
+
+    // BFS to find all descendant node IDs
+    const descendants = new Set<string>();
+    const queue = [nodeId];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const childEdges = state.edges.filter((e) => e.source === current);
+      for (const edge of childEdges) {
+        if (!descendants.has(edge.target)) {
+          descendants.add(edge.target);
+          queue.push(edge.target);
+        }
+      }
+    }
+
+    if (descendants.size === 0) return; // leaf node, nothing to collapse
+
+    const hiddenNodeIds = [...descendants];
+    const hiddenEdgeIds = state.edges
+      .filter((e) => descendants.has(e.source) || descendants.has(e.target))
+      .map((e) => e.id);
+
+    set({
+      collapsedBranches: {
+        ...state.collapsedBranches,
+        [nodeId]: { hiddenNodeIds, hiddenEdgeIds },
+      },
+      nodes: state.nodes.map((n) =>
+        descendants.has(n.id) ? { ...n, hidden: true } : n
+      ),
+      edges: state.edges.map((e) =>
+        hiddenEdgeIds.includes(e.id) ? { ...e, hidden: true } : e
+      ),
+    });
+  },
+
+  expandBranch: (nodeId) => {
+    const state = get();
+    const collapsed = state.collapsedBranches[nodeId];
+    if (!collapsed) return;
+
+    const hiddenSet = new Set(collapsed.hiddenNodeIds);
+    const hiddenEdgeSet = new Set(collapsed.hiddenEdgeIds);
+
+    const { [nodeId]: _, ...remainingCollapsed } = state.collapsedBranches;
+
+    set({
+      collapsedBranches: remainingCollapsed,
+      nodes: state.nodes.map((n) =>
+        hiddenSet.has(n.id) ? { ...n, hidden: false } : n
+      ),
+      edges: state.edges.map((e) =>
+        hiddenEdgeSet.has(e.id) ? { ...e, hidden: false } : e
+      ),
+    });
   },
 
   // --- Reset ---

@@ -53,7 +53,17 @@ function AtlasConnectorComponent({
 }: EdgeProps) {
   const activeNodeId = useAtlasStore((s) => s.activeNodeId);
   const edges = useAtlasStore((s) => s.edges);
-  const nodes = useAtlasStore((s) => s.nodes);
+
+  // Primitive-returning selectors — Zustand's default Object.is comparison
+  // prevents re-renders when the value hasn't changed (most of the time)
+  const isSpawning = useAtlasStore((s) => {
+    const targetNode = s.nodes.find((n) => n.id === target);
+    return targetNode?.data?.isNew === true;
+  });
+  const spawnIndex = useAtlasStore((s) => {
+    const targetNode = s.nodes.find((n) => n.id === target);
+    return (targetNode?.data?.spawnIndex as number) ?? 0;
+  });
 
   const activeThreadEdgeIds = useMemo(
     () => getActiveThreadEdgeIds(edges, activeNodeId),
@@ -61,14 +71,6 @@ function AtlasConnectorComponent({
   );
 
   const isActive = activeThreadEdgeIds.has(id);
-
-  // Check if target node is new (for spawn draw-in animation)
-  const targetNode = useMemo(
-    () => nodes.find((n) => n.id === target),
-    [nodes, target]
-  );
-  const isSpawning = targetNode?.data?.isNew === true;
-  const spawnIndex = (targetNode?.data?.spawnIndex as number) ?? 0;
 
   const [edgePath] = getBezierPath({
     sourceX,

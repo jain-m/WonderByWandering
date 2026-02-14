@@ -55,6 +55,7 @@ export default function App() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
+        onlyRenderVisibleElements
         proOptions={{ hideAttribution: true }}
       >
         <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--color-paper-grid-dot, #e8e6e1)" />

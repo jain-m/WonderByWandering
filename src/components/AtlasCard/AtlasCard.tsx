@@ -43,12 +43,20 @@ const PATH_LABELS: Record<PathType, string> = {
 type AtlasCardNode = Node<AtlasNodeData>;
 
 const AtlasCard: React.FC<NodeProps<AtlasCardNode>> = ({ id, data }) => {
-  const { answerVisibility, nodeStates, activeNodeId, toggleAnswer, updateNodeData, addNodes, addEdges, setActiveNode } = useAtlasStore();
+  // Granular selectors — only re-render when THIS node's relevant state changes
+  const nodeState = useAtlasStore((s) => s.nodeStates[id] || 'idle');
+  const isAnswerVisible = useAtlasStore((s) => s.answerVisibility[id] || false);
+  const activeNodeId = useAtlasStore((s) => s.activeNodeId);
+  const toggleAnswer = useAtlasStore((s) => s.toggleAnswer);
+  const updateNodeData = useAtlasStore((s) => s.updateNodeData);
+  const addNodes = useAtlasStore((s) => s.addNodes);
+  const addEdges = useAtlasStore((s) => s.addEdges);
+  const setActiveNode = useAtlasStore((s) => s.setActiveNode);
   const edges = useAtlasStore((s) => s.edges);
-  const nodes = useAtlasStore((s) => s.nodes);
+  const isCollapsed = useAtlasStore((s) => !!s.collapsedBranches[id]);
+  const collapseBranch = useAtlasStore((s) => s.collapseBranch);
+  const expandBranch = useAtlasStore((s) => s.expandBranch);
 
-  const nodeState = nodeStates[id] || 'idle';
-  const isAnswerVisible = answerVisibility[id] || false;
   const isActive = activeNodeId === id;
   const accentColor = PATH_COLORS[data.pathType];
 
@@ -84,6 +92,33 @@ const AtlasCard: React.FC<NodeProps<AtlasCardNode>> = ({ id, data }) => {
     return false;
   }, [edges, activeNodeId, id]);
 
+  // Check if this node has children (is non-leaf)
+  const hasChildren = useMemo(() => {
+    return edges.some((e) => e.source === id);
+  }, [edges, id]);
+
+  // Build summary data when this branch is collapsed
+  const branchSummary = useMemo(() => {
+    if (!isCollapsed) return null;
+    const state = useAtlasStore.getState();
+    const collapsed = state.collapsedBranches[id];
+    if (!collapsed) return null;
+
+    const hiddenNodes = state.nodes.filter((n) =>
+      collapsed.hiddenNodeIds.includes(n.id)
+    );
+    const answeredNodes = hiddenNodes.filter((n) => n.data.answer);
+    const bullets = answeredNodes
+      .map((n) => n.data.answer!.summary)
+      .slice(0, 3); // max 3 key summaries
+
+    return {
+      nodeCount: hiddenNodes.length,
+      answeredCount: answeredNodes.length,
+      bullets,
+    };
+  }, [isCollapsed, id]);
+
   const handleShowAnswer = useCallback(async () => {
     if (!startGeneration(id)) return; // prevents duplicate calls
 
@@ -98,14 +133,14 @@ const AtlasCard: React.FC<NodeProps<AtlasCardNode>> = ({ id, data }) => {
       // Store answer in node data
       updateNodeData(id, { answer: result });
       markResolved(id);
-      // Make answer visible
-      if (!answerVisibility[id]) {
+      // Make answer visible — read lazily to avoid subscribing to entire answerVisibility
+      if (!useAtlasStore.getState().answerVisibility[id]) {
         toggleAnswer(id);
       }
     } catch (err) {
       markError(id);
     }
-  }, [id, data, updateNodeData, answerVisibility, toggleAnswer]);
+  }, [id, data, updateNodeData, toggleAnswer]);
 
   const handleBranch = useCallback(async (branchType: BranchType) => {
     try {
@@ -117,8 +152,8 @@ const AtlasCard: React.FC<NodeProps<AtlasCardNode>> = ({ id, data }) => {
         sourceText: data.sourceText,
       }, branchType);
 
-      // Find current node position from store
-      const currentNode = nodes.find((n) => n.id === id);
+      // Read nodes lazily — no subscription needed for one-shot position lookup
+      const currentNode = useAtlasStore.getState().nodes.find((n) => n.id === id);
       const parentX = currentNode?.position?.x ?? 0;
       const parentY = currentNode?.position?.y ?? 0;
 
@@ -158,7 +193,7 @@ const AtlasCard: React.FC<NodeProps<AtlasCardNode>> = ({ id, data }) => {
     } catch (error) {
       console.error('Failed to generate branches:', error);
     }
-  }, [id, data, nodes, addNodes, addEdges, setActiveNode]);
+  }, [id, data, addNodes, addEdges, setActiveNode]);
 
   // Determine card CSS classes
   const cardClasses = [
@@ -250,6 +285,37 @@ const AtlasCard: React.FC<NodeProps<AtlasCardNode>> = ({ id, data }) => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 7. Summarize / Expand Branch Controls */}
+      {hasChildren && !isCollapsed && nodeState === 'resolved' && (
+        <button
+          className={styles.summarizeButton}
+          onClick={() => collapseBranch(id)}
+        >
+          Summarize Branch
+        </button>
+      )}
+
+      {isCollapsed && branchSummary && (
+        <div className={styles.branchSummary}>
+          <div className={styles.summaryHeader}>
+            {branchSummary.nodeCount} node{branchSummary.nodeCount !== 1 ? 's' : ''} ({branchSummary.answeredCount} answered)
+          </div>
+          {branchSummary.bullets.length > 0 && (
+            <ul className={styles.summaryBullets}>
+              {branchSummary.bullets.map((bullet, i) => (
+                <li key={i}>{bullet}</li>
+              ))}
+            </ul>
+          )}
+          <button
+            className={styles.expandButton}
+            onClick={() => expandBranch(id)}
+          >
+            Expand Branch
+          </button>
         </div>
       )}
 
