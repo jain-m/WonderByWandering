@@ -53,11 +53,13 @@ function ToolbarComponent() {
       <button
         className={styles.button}
         onClick={handleReset}
-        title="Reset canvas"
+        title="Return to Compass (Reset)"
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <path d="M2 8a6 6 0 0 1 10.3-4.2M14 8a6 6 0 0 1-10.3 4.2" />
-          <path d="M14 2v4h-4M2 14v-4h4" />
+          <circle cx="8" cy="8" r="6" />
+          <path d="M8 2v3M8 11v3M2 8h3M11 8h3" />
+          <circle cx="8" cy="8" r="1" fill="currentColor" />
+          <path d="M10 6L6 10" strokeLinecap="round" />
         </svg>
       </button>
 
