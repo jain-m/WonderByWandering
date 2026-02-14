@@ -1,22 +1,22 @@
 async function getKey() {
   const result = await chrome.storage.local.get(['MY_API_KEY']);
-  
+
   if (!result.MY_API_KEY) {
     console.warn("API Key is missing. Please set it in the options page.");
     return null;
   }
-  
+
   return result.MY_API_KEY;
 }
 
 async function listMyModels() {
   const API_KEY = await getKey();
   const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${API_KEY}`;
-  
+
   try {
     const response = await fetch(url);
     const data = await response.json();
-    
+
     if (data.error) {
       console.error("❌ API Key Error:", data.error.message);
       return;
@@ -98,7 +98,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: runWonderizer,
-      args: ["List Key Points From", info.selectionText, API_KEY, API_URL] 
+      args: ["List Key Points From", info.selectionText, API_KEY, API_URL]
     });
   }
 
@@ -156,7 +156,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         "Connect",
         "Surprise Me"
       ],
-      demoMode: true,
+      demoMode: false,
       createdAt: Date.now()
     };
 
@@ -195,7 +195,7 @@ async function runSummarization(prompt, passedText, key, url) {
       }
       return line + '<br>';
     }).join('');
-    
+
     return inList ? html + '</ul>' : html;
   }
 
@@ -279,7 +279,7 @@ async function runWonderizer(prompt, passedText, key, url) {
 
   function createWonderwheel(items) {
     if (items.length === 0) return "";
-    
+
     // We limit to 8 items to keep the circle from getting too crowded
     const displayItems = items.slice(0, 8);
     const angleStep = 360 / displayItems.length;
@@ -311,7 +311,7 @@ async function runWonderizer(prompt, passedText, key, url) {
     if (bulletPoints.length > 0) {
       return createWonderwheel(bulletPoints);
     }
-    
+
     // Fallback if no bullets found
     return `<p>${text}</p>`;
   }
@@ -319,7 +319,7 @@ async function runWonderizer(prompt, passedText, key, url) {
   // CREATE WIKI-STYLE OVERLAY WITH WONDERWHEEL STYLES
   const overlay = document.createElement('div');
   overlay.id = "gemini-wiki-widget";
-  
+
   // Injecting CSS for the Wonderwheel
   const styleTag = document.createElement('style');
   styleTag.textContent = `

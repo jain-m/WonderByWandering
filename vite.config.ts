@@ -5,6 +5,7 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [react()],
   base: './',
+  envPrefix: 'GEMINI_',
   build: {
     outDir: 'dist',
     rollupOptions: {

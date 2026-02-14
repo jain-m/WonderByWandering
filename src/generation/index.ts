@@ -51,13 +51,19 @@ async function shouldUseGemini(): Promise<boolean> {
   const session = useAtlasStore.getState().session;
   if (!session || session.demoMode) return false;
 
-  if (typeof chrome === 'undefined' || !chrome.storage?.local) return false;
+  // 1. Check Vite env (local dev mode)
+  if (import.meta.env?.GEMINI_API_KEY) return true;
 
-  return new Promise((resolve) => {
-    chrome.storage.local.get(['MY_API_KEY'], (result: Record<string, string>) => {
-      resolve(!!result.MY_API_KEY);
+  // 2. Check chrome.storage (extension mode)
+  if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['MY_API_KEY'], (result: Record<string, string>) => {
+        resolve(!!result.MY_API_KEY);
+      });
     });
-  });
+  }
+
+  return false;
 }
 
 // ============================================================

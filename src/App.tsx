@@ -11,10 +11,13 @@ import { ConversationCompass } from './components/ConversationCompass/Conversati
 import { nodeTypes } from './components/AtlasCard/AtlasCard';
 import { edgeTypes } from './components/AtlasConnector/AtlasConnector';
 import { CanvasControls } from './components/CanvasControls';
+import { TopicInput } from './components/TopicInput/TopicInput';
+import { Toolbar } from './components/Toolbar/Toolbar';
 
 export default function App() {
-  const { nodes, edges, onNodesChange, onEdgesChange, setActiveNode, loadSession } = useAtlasStore();
+  const { nodes, edges, onNodesChange, onEdgesChange, setActiveNode, loadSession, session } = useAtlasStore();
   const [loading, setLoading] = useState(true);
+  const [isExtensionMode, setIsExtensionMode] = useState(false);
 
   const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     setActiveNode(node.id);
@@ -26,22 +29,31 @@ export default function App() {
     const sessionId = params.get('sessionId');
 
     if (!sessionId) {
+      // No sessionId = local dev mode, show topic input
+      setIsExtensionMode(false);
       setLoading(false);
       return;
     }
 
-    // Load session using store action
+    // Extension mode: load session from chrome.storage
+    setIsExtensionMode(true);
     loadSession(sessionId).finally(() => {
       setLoading(false);
     });
   }, [loadSession]);
 
-  if (loading) {
+  // Extension mode: loading spinner
+  if (loading && isExtensionMode) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: 'var(--color-text-muted)' }}>
         Loading session...
       </div>
     );
+  }
+
+  // No session yet: show topic input (local dev mode)
+  if (!session) {
+    return <TopicInput />;
   }
 
   return (
@@ -60,6 +72,7 @@ export default function App() {
       >
         <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--color-paper-grid-dot, #e8e6e1)" />
         <CanvasControls />
+        <Toolbar />
         <ConversationCompass />
       </ReactFlow>
     </div>

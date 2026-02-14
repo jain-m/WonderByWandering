@@ -25,14 +25,20 @@ import { useAtlasStore } from '../store/atlasStore';
 // ============================================================
 
 async function getApiKey(): Promise<string | null> {
-  if (typeof chrome === 'undefined' || !chrome.storage?.local) {
-    return null;
-  }
-  return new Promise((resolve) => {
-    chrome.storage.local.get(['MY_API_KEY'], (result: Record<string, string>) => {
-      resolve(result.MY_API_KEY || null);
+  // 1. Check Vite env (local dev mode)
+  const envKey = import.meta.env?.GEMINI_API_KEY;
+  if (envKey) return envKey;
+
+  // 2. Check chrome.storage (extension mode)
+  if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['MY_API_KEY'], (result: Record<string, string>) => {
+        resolve(result.MY_API_KEY || null);
+      });
     });
-  });
+  }
+
+  return null;
 }
 
 // ============================================================
