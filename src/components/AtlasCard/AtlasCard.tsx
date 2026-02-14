@@ -56,6 +56,9 @@ const AtlasCard: React.FC<NodeProps<AtlasCardNode>> = ({ id, data }) => {
   const isCollapsed = useAtlasStore((s) => !!s.collapsedBranches[id]);
   const collapseBranch = useAtlasStore((s) => s.collapseBranch);
   const expandBranch = useAtlasStore((s) => s.expandBranch);
+  const streamingText = useAtlasStore((s) => s.streamingText[id] || '');
+  const appendStreamingText = useAtlasStore((s) => s.appendStreamingText);
+  const clearStreamingText = useAtlasStore((s) => s.clearStreamingText);
 
   const isActive = activeNodeId === id;
   const accentColor = PATH_COLORS[data.pathType];
@@ -121,6 +124,7 @@ const AtlasCard: React.FC<NodeProps<AtlasCardNode>> = ({ id, data }) => {
 
   const handleShowAnswer = useCallback(async () => {
     if (!startGeneration(id)) return; // prevents duplicate calls
+    clearStreamingText(id);
 
     try {
       const result = await generateAnswer({
@@ -128,19 +132,23 @@ const AtlasCard: React.FC<NodeProps<AtlasCardNode>> = ({ id, data }) => {
         context: data.context,
         pathType: data.pathType,
         sourceText: data.sourceText,
+      }, (delta) => {
+        appendStreamingText(id, delta);
       });
 
       // Store answer in node data
       updateNodeData(id, { answer: result });
+      clearStreamingText(id);
       markResolved(id);
       // Make answer visible — read lazily to avoid subscribing to entire answerVisibility
       if (!useAtlasStore.getState().answerVisibility[id]) {
         toggleAnswer(id);
       }
     } catch (err) {
+      clearStreamingText(id);
       markError(id);
     }
-  }, [id, data, updateNodeData, toggleAnswer]);
+  }, [id, data, updateNodeData, toggleAnswer, appendStreamingText, clearStreamingText]);
 
   const handleBranch = useCallback(async (branchType: BranchType) => {
     try {
@@ -210,10 +218,9 @@ const AtlasCard: React.FC<NodeProps<AtlasCardNode>> = ({ id, data }) => {
   // Stagger animation delay based on spawnIndex
   const spawnStyle = data.isNew
     ? {
-        animationDelay: `${
-          DURATION.CARD_FADE_DELAY + (data.spawnIndex ?? 0) * DURATION.SIBLING_STAGGER
+      animationDelay: `${DURATION.CARD_FADE_DELAY + (data.spawnIndex ?? 0) * DURATION.SIBLING_STAGGER
         }ms`,
-      }
+    }
     : undefined;
 
   return (
@@ -243,7 +250,18 @@ const AtlasCard: React.FC<NodeProps<AtlasCardNode>> = ({ id, data }) => {
         </button>
       )}
 
-      {nodeState === 'loading' && <div className={styles.spinner} />}
+      {nodeState === 'loading' && (
+        <div className={styles.streamingBody}>
+          {streamingText ? (
+            <p className={styles.streamingText}>
+              {streamingText}
+              <span className={styles.streamingCursor} />
+            </p>
+          ) : (
+            <div className={styles.spinner} />
+          )}
+        </div>
+      )}
 
       {nodeState === 'error' && (
         <>

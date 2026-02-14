@@ -114,9 +114,12 @@ export async function generatePathQuestions(
   );
 }
 
-export async function generateAnswer(nodeData: NodeData): Promise<AnswerResult> {
+export async function generateAnswer(
+  nodeData: NodeData,
+  onChunk?: (delta: string) => void,
+): Promise<AnswerResult> {
   return withFallback(
-    (p) => p.generateAnswer(nodeData),
+    (p) => p.generateAnswer(nodeData, onChunk),
     (p) => p.generateAnswer(nodeData),
   );
 }
@@ -130,3 +133,4 @@ export async function generateBranches(
     (p) => p.generateBranches(nodeData, branchType),
   );
 }
+

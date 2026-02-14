@@ -125,8 +125,8 @@ QUESTION: "${question}"
 ORIGINAL TEXT: "${sourceText}"
 
 INSTRUCTIONS:
-- Start with a single-sentence insight that reframes or deepens how the user sees this question.
-- Follow with 3-4 bullet points that explore different dimensions, tensions, or trade-offs within the question.
+- Start with a single bold sentence that reframes or deepens how the user sees this question, prefixed with **
+- Follow with 3-4 bullet points (using - ) that explore different dimensions, tensions, or trade-offs within the question.
 - Each bullet should open a new angle, not close one. Surface what's genuinely uncertain, contested, or surprising.
 - Be specific and grounded — avoid vague generalizations.
 - Never offer a definitive conclusion. End by hinting at what remains unresolved.
@@ -134,8 +134,7 @@ INSTRUCTIONS:
 
 IMPORTANT: You are illuminating, not solving. Never collapse the forest into a single road.
 
-Return ONLY valid JSON matching this exact schema, no markdown fences, no preamble:
-{ "summary": "One sentence that reframes or deepens the question", "bullets": ["Point 1", "Point 2", "Point 3"] }`;
+Return plain text only. No JSON. No markdown code fences. Start with the bold sentence, then bullet points.`;
 }
 
 /**

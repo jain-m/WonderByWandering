@@ -39,7 +39,7 @@ export interface NodeData {
 
 export interface GenerationProvider {
   generatePathQuestions(sourceText: string, pathType: PathType): Promise<PathQuestionResult>;
-  generateAnswer(nodeData: NodeData): Promise<AnswerResult>;
+  generateAnswer(nodeData: NodeData, onChunk?: (delta: string) => void): Promise<AnswerResult>;
   generateBranches(nodeData: NodeData, branchType: BranchType): Promise<BranchResult>;
 }
 

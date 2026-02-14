@@ -46,7 +46,9 @@ async function getApiKey(): Promise<string | null> {
 // ============================================================
 
 const MODEL_ID = 'gemini-2.5-flash';
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}:generateContent`;
+const API_BASE = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}`;
+const API_URL = `${API_BASE}:generateContent`;
+const STREAM_URL = `${API_BASE}:streamGenerateContent`;
 
 const MAX_RETRIES = 3;
 const BACKOFF_MS = [1000, 2000, 4000]; // exponential: 1s, 2s, 4s
@@ -107,6 +109,72 @@ async function callGemini(prompt: string): Promise<string> {
   throw lastError ?? new Error('Gemini call failed after retries');
 }
 
+/**
+ * Call the Gemini Streaming API and yield text chunks via callback.
+ * Uses Server-Sent Events (SSE) via streamGenerateContent?alt=sse.
+ */
+async function callGeminiStream(
+  prompt: string,
+  onChunk: (delta: string) => void,
+): Promise<string> {
+  const apiKey = await getApiKey();
+  if (!apiKey) throw new Error('No API key configured');
+
+  const response = await fetch(`${STREAM_URL}?key=${apiKey}&alt=sse`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Gemini streaming error: ${response.status} ${response.statusText}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('No response body for streaming');
+
+  const decoder = new TextDecoder();
+  let accumulated = '';
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+
+    // Process SSE lines
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const jsonStr = line.slice(6).trim();
+        if (!jsonStr || jsonStr === '[DONE]') continue;
+
+        try {
+          const data = JSON.parse(jsonStr);
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) {
+            accumulated += text;
+            onChunk(text);
+          }
+        } catch {
+          // Skip malformed SSE chunks
+        }
+      }
+    }
+  }
+
+  if (!accumulated) {
+    throw new Error('Empty streaming response from Gemini');
+  }
+
+  return accumulated;
+}
+
 // ============================================================
 // JSON Parsing & Validation
 // ============================================================
@@ -143,14 +211,6 @@ function validatePathQuestionResult(obj: unknown): PathQuestionResult {
   return result;
 }
 
-/** Validate that parsed data matches the AnswerResult shape. */
-function validateAnswerResult(obj: unknown): AnswerResult {
-  const result = obj as AnswerResult;
-  if (typeof result.summary !== 'string' || !Array.isArray(result.bullets)) {
-    throw new Error('Invalid AnswerResult shape');
-  }
-  return result;
-}
 
 /** Validate that parsed data matches the BranchResult shape. */
 function validateBranchResult(obj: unknown): BranchResult {
@@ -201,11 +261,51 @@ async function generatePathQuestions(
   throw new Error('Quality gate loop exited unexpectedly');
 }
 
-async function generateAnswer(nodeData: NodeData): Promise<AnswerResult> {
+/**
+ * Parse streamed plain-text answer into AnswerResult shape.
+ * Expects: a bold summary line, followed by bullet points.
+ */
+function parseStreamedAnswer(text: string): AnswerResult {
+  const lines = text.trim().split('\n').filter((l) => l.trim());
+
+  // First non-empty line is the summary (strip ** bold markers)
+  let summary = lines[0] || '';
+  summary = summary.replace(/^\*\*(.*)\*\*$/, '$1').replace(/^\*\*/, '').replace(/\*\*$/, '').trim();
+
+  // Remaining lines that start with - or * are bullets
+  const bullets: string[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i]?.trim();
+    if (!line) continue;
+    if (line.startsWith('- ') || line.startsWith('* ')) {
+      bullets.push(line.slice(2).trim());
+    } else if (line && bullets.length === 0) {
+      // Part of multi-line summary
+      summary += ' ' + line;
+    } else if (line && bullets.length > 0) {
+      // Continuation of last bullet
+      bullets[bullets.length - 1] += ' ' + line;
+    }
+  }
+
+  return { summary, bullets };
+}
+
+async function generateAnswer(
+  nodeData: NodeData,
+  onChunk?: (delta: string) => void,
+): Promise<AnswerResult> {
   const prompt = buildAnswerPrompt(nodeData.question, nodeData.sourceText);
+
+  if (onChunk) {
+    // Streaming path
+    const fullText = await callGeminiStream(prompt, onChunk);
+    return parseStreamedAnswer(fullText);
+  }
+
+  // Non-streaming fallback
   const text = await callGemini(prompt);
-  const parsed = parseJsonResponse(text);
-  return validateAnswerResult(parsed);
+  return parseStreamedAnswer(text);
 }
 
 async function generateBranches(

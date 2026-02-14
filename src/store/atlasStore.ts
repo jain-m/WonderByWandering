@@ -56,6 +56,7 @@ interface AtlasState {
   uiMode: UiMode;
   answerVisibility: Record<string, boolean>;
   nodeStates: Record<string, NodeState>;
+  streamingText: Record<string, string>;
   collapsedBranches: Record<string, { hiddenNodeIds: string[]; hiddenEdgeIds: string[] }>;
 
   // Actions
@@ -72,6 +73,8 @@ interface AtlasState {
   loadSession: (sessionId: string) => Promise<void>;
   collapseBranch: (nodeId: string) => void;
   expandBranch: (nodeId: string) => void;
+  appendStreamingText: (nodeId: string, delta: string) => void;
+  clearStreamingText: (nodeId: string) => void;
   resetCanvas: () => void;
 
   // React Flow callbacks
@@ -91,6 +94,7 @@ const initialState = {
   uiMode: 'compass' as UiMode,
   answerVisibility: {} as Record<string, boolean>,
   nodeStates: {} as Record<string, NodeState>,
+  streamingText: {} as Record<string, string>,
   collapsedBranches: {} as Record<string, { hiddenNodeIds: string[]; hiddenEdgeIds: string[] }>,
 };
 
@@ -163,6 +167,22 @@ export const useAtlasStore = create<AtlasState>()((set, get) => ({
       });
     }
   },
+
+  // --- Streaming ---
+
+  appendStreamingText: (nodeId, delta) =>
+    set((state) => ({
+      streamingText: {
+        ...state.streamingText,
+        [nodeId]: (state.streamingText[nodeId] || '') + delta,
+      },
+    })),
+
+  clearStreamingText: (nodeId) =>
+    set((state) => {
+      const { [nodeId]: _, ...rest } = state.streamingText;
+      return { streamingText: rest };
+    }),
 
   // --- Collapse / Expand Branch ---
 
